@@ -1,5 +1,3 @@
-//https://www.npmjs.com/package/react-organizational-chart
-//https://daniel-hauser.github.io/react-organizational-chart/?path=/docs/example-tree--styled
 import {useState} from 'react';
 import { Tree, TreeNode } from 'react-organizational-chart';
 import { BTNode } from './types';

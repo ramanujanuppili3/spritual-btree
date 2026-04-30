@@ -1,22 +1,88 @@
 import { BTNode } from './types';
 let indexGlobal = 0;
 
-export function createSampleTree(
+export async function createSampleTree(
   maxDepth: number,
   currDepth: number = 1
-): BTNode {
-    indexGlobal += 1;
+): Promise<BTNode> {
+  indexGlobal += 1;
   //TODO: make it a sorted tree?
-  let left = null;
-  let right = null;
-  let index = indexGlobal;
-  if (currDepth < maxDepth) {
-    left = createSampleTree(maxDepth, currDepth + 1);
-    right = createSampleTree(maxDepth, currDepth + 1);
+  const index = indexGlobal;
+
+  try {
+    const response = await fetch('http://localhost:3005/api/btree/nested');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Extract JSON response and build the nested tree
+    const data = await response.json();
+    const tree: BTNode = buildNestedTree(data, currDepth, maxDepth);
+
+    console.log('Full nested tree structure:', tree);
+
+    // Ensure the returned node conforms to BTNode shape by attaching index
+    return { ...tree, index };
+  } catch (error) {
+    console.error('Error extracting JSON:', error);
+    throw error;
   }
-  console.log("index   ", index);
-  return { left, right, value: '' + randomHexCode() , index};
 }
+
+
+// Build nested tree structure recursively
+function buildNestedTree(
+  data: any,
+  currDepth: number = 1,
+  maxDepth: number = 3
+): BTNode {
+  if (!data) return {} as BTNode;
+
+  const node: BTNode = {
+    // index: normalizeIndex(data.index),
+    value: data.value
+  };
+
+  // Add left subtree if exists and depth not exceeded
+  if (data.left && currDepth < maxDepth) {
+    node.left = buildNestedTree(data.left, currDepth + 1, maxDepth);
+  } 
+  // else if (data.left) {
+  //   node.left = {
+  //     // index: normalizeIndex(data.left.index),
+  //     value: data.left.value
+  //   };
+  // }
+
+  // Add right subtree if exists and depth not exceeded
+  if (data.right && currDepth < maxDepth) {
+    node.right = buildNestedTree(data.right, currDepth + 1, maxDepth);
+  } 
+  // else if (data.right) {
+  //   node.right = {
+  //     // index: normalizeIndex(data.right.index),
+  //     value: data.right.value
+  //   };
+  // }
+
+  return node;
+}
+
+
+// Normalize index format
+function normalizeIndex(index: any): { low: number; high: number } {
+  if (typeof index === 'number') {
+    return { low: index, high: 0 };
+  }
+  return index;
+}
+
+
+// async function fetchTreeNode(): Promise<BTNode> {
+//   const response = await fetch('http://localhost:3000/api/btree/nested');
+//   const treeNode: BTNode = response;
+//   return await response.json(); // Returns BTNode inside Promise
+// }
 
 /**
  * Mutate the given tree so that it is the mirror of its original self.

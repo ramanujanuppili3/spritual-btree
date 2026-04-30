@@ -1,5 +1,3 @@
-//https://www.npmjs.com/package/react-organizational-chart
-//https://daniel-hauser.github.io/react-organizational-chart/?path=/docs/example-tree--styled
 import React from 'react';
 import {EditBtree} from './EditBtree.tsx';
 import { BTNode } from './types';
@@ -27,7 +25,7 @@ export function Btree(props) : JSX.Element  {
 
 //Recursively convert our btree to a OrgChart JSX element tree.
  function btreeToJSX(node: BTNode, index: number): JSX.Element {
-    
+    console.log("rendering node ", node.value, " at index ", index);
     function updateNodeValue(node: BTNode, index: number) {
         props.updateNodeValue(node, index);
 
@@ -44,6 +42,7 @@ export function Btree(props) : JSX.Element  {
         >
           {/* abbreviated label */}
           {/* {node.value.slice(0, 2).toUpperCase()} */}
+          
           {<input type="text" value={node.value.slice(0, 2).toUpperCase()} onChange={e => {node.value = e.target.value; updateNodeValue(node, index)}} />}
         </div>
       }
