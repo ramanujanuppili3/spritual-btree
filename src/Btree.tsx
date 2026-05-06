@@ -43,7 +43,7 @@ export function Btree(props) : JSX.Element  {
           {/* abbreviated label */}
           {/* {node.value.slice(0, 2).toUpperCase()} */}
           
-          {<input type="text" value={node.value.slice(0, 2).toUpperCase()} onChange={e => {node.value = e.target.value; updateNodeValue(node, index)}} />}
+          {<input type="text" value={node.value.toUpperCase()} onChange={e => {node.value = e.target.value; updateNodeValue(node, index)}} />}
         </div>
       }
     >

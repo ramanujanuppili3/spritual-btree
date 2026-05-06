@@ -17,6 +17,7 @@ export async function createSampleTree(
 
     // Extract JSON response and build the nested tree
     const data = await response.json();
+    console.log('Raw JSON response:', data);
     const tree: BTNode = buildNestedTree(data, currDepth, maxDepth);
 
     console.log('Full nested tree structure:', tree);
@@ -38,9 +39,11 @@ function buildNestedTree(
 ): BTNode {
   if (!data) return {} as BTNode;
 
+  console.log('Raw JSON response nodeId:', data.nodeId);
   const node: BTNode = {
     // index: normalizeIndex(data.index),
-    value: data.value
+    value: data.value,
+    nodeId: data.nodeId
   };
 
   // Add left subtree if exists and depth not exceeded

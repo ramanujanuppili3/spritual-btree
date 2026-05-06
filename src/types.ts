@@ -3,4 +3,5 @@ export interface BTNode {
   right: BTNode | null;
   value: string;
   index: number;
+  nodeId: string;
 }

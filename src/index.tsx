@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BTNode } from './types.ts';
+import { updateNodeById, updateNodeByIndex, batchUpdateNodes } from './services/treeApi.ts';
 
 import {
   createSampleTree,
@@ -58,6 +59,7 @@ export function App1() {
     }
   }, [tree]); // ✅ FIXED: Dependency on [tree] - runs when tree updates
 
+  
   // ✅ FIXED: regenerate function - properly await and set tree
   async function regenerate(): Promise<void> {
     try {
@@ -114,14 +116,28 @@ export function App1() {
   }
 
   // ✅ FIXED: Handle update - properly update tree
-  function handleUpdate(node: BTNode, index: number): void {
+  async function handleUpdate(node: BTNode, index: number): void {
     console.log("🔧 Updating node at index:", index);
     console.log("   Node value:", node.value);
+    console.log("   Node ID:", node.nodeId);
     console.log("   Current tree:", tree);
 
     // Update tree with new node at index
     const updatedTree = updateNodeAtIndex(tree, index);
+    console.log("✅ Node updated. Updated tree:", JSON.stringify(updatedTree));
     setTree(updatedTree);
+
+     // 2. Update on backend by nodeId
+      if (node.nodeId) {
+        console.log("🌐 Calling backend API to update node...");
+
+        const response = await updateNodeById(node.nodeId, node.value);
+
+        console.log("✅ Backend updated successfully:", response);
+
+      } else {
+        console.warn("⚠️ Node has no ID, skipping backend update");
+      }
   }
 
   // Loading state
