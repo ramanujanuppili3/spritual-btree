@@ -16,7 +16,7 @@ export function Btree(props) : JSX.Element  {
 
   return (
     <div className="bTree">
-      <Tree label={props.label}>{btreeToJSX(head,0)}</Tree>
+      <Tree label={props.label}>{btreeToJSX(head, 0)}</Tree>
     </div>
 
    
@@ -26,24 +26,154 @@ export function Btree(props) : JSX.Element  {
 //Recursively convert our btree to a OrgChart JSX element tree.
  function btreeToJSX(node: BTNode, index: number): JSX.Element {
     console.log("rendering node ", node.value, " at index ", index);
+    
     function updateNodeValue(node: BTNode, index: number) {
+        console.log("🔧 updateNodeValue called with:", { value: node.value, nodeId: node.nodeId, index });
         props.updateNodeValue(node, index);
-
     }
+
+    function addLeftNode() {
+        console.log("➕ Adding left child to node:", node.value);
+        console.log("   Current left child:", node.left);
+        
+        if (node.left) {
+            // Node already has a left child - move it under the new node
+            console.log("   Left child exists, moving it under new node");
+            const existingLeftChild = node.left;
+            
+            // Create new intermediate node
+            const newNode: BTNode = { 
+              value: 'new', 
+              left: existingLeftChild,  // Move existing child under new node
+              right: null, 
+              nodeId: '', 
+              index: 0 
+            };
+            
+            node.left = newNode;
+            console.log("✅ New node inserted, existing child moved under it");
+        } else {
+            // Node has no left child - just create new leaf node
+            console.log("   No left child exists, creating new leaf node");
+            node.left = { value: 'new', left: null, right: null, nodeId: '', index: 0 };
+            console.log("✅ New leaf node created");
+        }
+        
+        updateNodeValue(node, index);
+    }
+
+    function addRightNode() {
+        console.log("➕ Adding right child to node:", node.value);
+        console.log("   Current right child:", node.right);
+        
+        if (node.right) {
+            // Node already has a right child - move it under the new node
+            console.log("   Right child exists, moving it under new node");
+            const existingRightChild = node.right;
+            
+            // Create new intermediate node
+            const newNode: BTNode = { 
+              value: 'new', 
+              left: null, 
+              right: existingRightChild,  // Move existing child under new node
+              nodeId: '', 
+              index: 0 
+            };
+            
+            node.right = newNode;
+            console.log("✅ New node inserted, existing child moved under it");
+        } else {
+            // Node has no right child - just create new leaf node
+            console.log("   No right child exists, creating new leaf node");
+            node.right = { value: 'new', left: null, right: null, nodeId: '', index: 0 };
+            console.log("✅ New leaf node created");
+        }
+        
+        updateNodeValue(node, index);
+    }
+
+    function deleteLeftChild() {
+        if (node.left) {
+            console.log("✕ Deleting left child of node:", node.value);
+            node.left = null;
+            updateNodeValue(node, index);
+        }
+    }
+
+    function deleteRightChild() {
+        if (node.right) {
+            console.log("✕ Deleting right child of node:", node.value);
+            node.right = null;
+            updateNodeValue(node, index);
+        }
+    }
+
   return (
     <TreeNode
       label={
-        <div
-          className="btreeNode"
-          title={node.value}
-          style={{
-            background: '#' + node.value,
-          }}
-        >
-          {/* abbreviated label */}
-          {/* {node.value.slice(0, 2).toUpperCase()} */}
+        <div className="btreeNode-container">
+          <div
+            className="btreeNode"
+            title={node.value}
+            style={{
+              background: '#' + node.value,
+            }}
+          >
+            {/* abbreviated label */}
+            {/* {node.value.slice(0, 2).toUpperCase()} */}
+            
+            <input 
+              type="text" 
+              value={node.value.toUpperCase()} 
+              onChange={e => {
+                const newValue = e.target.value;
+                node.value = newValue;
+                console.log("✏️ Node value changed to:", newValue);
+                updateNodeValue(node, index);
+              }}
+              onBlur={() => {
+                console.log("✏️ Input blur - ensuring update is saved for node:", node.nodeId);
+                updateNodeValue(node, index);
+              }}
+              className="node-input"
+            />
+          </div>
           
-          {<input type="text" value={node.value.toUpperCase()} onChange={e => {node.value = e.target.value; updateNodeValue(node, index)}} />}
+          {/* Node action buttons - Always enabled */}
+          <div className="node-actions">
+            <button 
+              onClick={addLeftNode}
+              className="btn-add-left"
+              title="Add/insert left child (moves existing child under new node if exists)"
+            >
+              +L
+            </button>
+            <button 
+              onClick={addRightNode}
+              className="btn-add-right"
+              title="Add/insert right child (moves existing child under new node if exists)"
+            >
+              +R
+            </button>
+            {node.left && (
+              <button 
+                onClick={deleteLeftChild}
+                className="btn-delete-left"
+                title="Delete left child and its subtree"
+              >
+                ✕L
+              </button>
+            )}
+            {node.right && (
+              <button 
+                onClick={deleteRightChild}
+                className="btn-delete-right"
+                title="Delete right child and its subtree"
+              >
+                ✕R
+              </button>
+            )}
+          </div>
         </div>
       }
     >

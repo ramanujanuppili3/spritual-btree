@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BTNode } from './types.ts';
-import { updateNodeById, updateNodeByIndex, batchUpdateNodes } from './services/treeApi.ts';
+import { updateNodeById, updateNodeByIndex, batchUpdateNodes, createNode } from './services/treeApi.ts';
 
 import {
   createSampleTree,
@@ -100,44 +100,124 @@ export function App1() {
 
   function updateNodeAtIndex(
     node: BTNode | null,
-    index: number
+    updatedNode: BTNode
   ): BTNode | null {
     if (!node) return null;
 
-    if (node.index === index) {
-      return { ...node, value: node.value };
+    // Compare node IDs if available, otherwise compare values and indices
+    const isSameNode = node.nodeId && updatedNode.nodeId
+      ? node.nodeId === updatedNode.nodeId
+      : node.value === updatedNode.value;
+
+    if (isSameNode) {
+      return { ...node, ...updatedNode };
     }
 
     return {
       ...node,
-      left: updateNodeAtIndex(node.left, index),
-      right: updateNodeAtIndex(node.right, index),
+      left: updateNodeAtIndex(node.left, updatedNode),
+      right: updateNodeAtIndex(node.right, updatedNode),
     };
   }
 
-  // ✅ FIXED: Handle update - properly update tree
+  // ✅ Helper: Find parent node ID for a given node
+  function findParentNodeId(currentNode: BTNode | null, targetNode: BTNode): string | null {
+    if (!currentNode) return null;
+
+    // Check if target is a direct child
+    if (currentNode.left === targetNode || currentNode.right === targetNode) {
+      return currentNode.nodeId || null;
+    }
+
+    // Recursively search in children
+    const leftResult = findParentNodeId(currentNode.left, targetNode);
+    if (leftResult) return leftResult;
+
+    return findParentNodeId(currentNode.right, targetNode);
+  }
+
+  // ✅ Helper: Determine if node is left or right child
+  function findNodePosition(currentNode: BTNode | null, targetNode: BTNode): 'left' | 'right' | null {
+    if (!currentNode) return null;
+
+    if (currentNode.left === targetNode) {
+      return 'left';
+    }
+
+    if (currentNode.right === targetNode) {
+      return 'right';
+    }
+
+    const leftResult = findNodePosition(currentNode.left, targetNode);
+    if (leftResult) return leftResult;
+
+    return findNodePosition(currentNode.right, targetNode);
+  }
+
+  // ✅ ENHANCED: Handle update with support for new nodes
   async function handleUpdate(node: BTNode, index: number): void {
     console.log("🔧 Updating node at index:", index);
     console.log("   Node value:", node.value);
     console.log("   Node ID:", node.nodeId);
     console.log("   Current tree:", tree);
 
-    // Update tree with new node at index
-    const updatedTree = updateNodeAtIndex(tree, index);
-    console.log("✅ Node updated. Updated tree:", JSON.stringify(updatedTree));
-    setTree(updatedTree);
-
-     // 2. Update on backend by nodeId
-      if (node.nodeId) {
-        console.log("🌐 Calling backend API to update node...");
-
+    try {
+      // Case 1: Node has an ID - it's an existing node, update it
+      if (node.nodeId && node.nodeId.trim() !== '') {
+        console.log("📝 Case 1: Updating existing node with ID:", node.nodeId);
+        
         const response = await updateNodeById(node.nodeId, node.value);
-
+        
         console.log("✅ Backend updated successfully:", response);
+        
+        // Update UI with the response data if available
+        if (response.node) {
+          const updatedTree = updateNodeAtIndex(tree, response.node);
+          setTree(updatedTree);
+        } else {
+          // Just update the tree state locally
+          const updatedTree = updateNodeAtIndex(tree, node);
+          setTree(updatedTree);
+        }
+      } 
+      // Case 2: Node has no ID - it's a new node, create it on backend
+      else {
+        console.log("➕ Case 2: Creating new node");
+        
+        // Find parent node to determine position
+        const parentNodeId = findParentNodeId(tree, node);
+        const position = findNodePosition(tree, node);
+        
+        console.log("   Parent Node ID:", parentNodeId);
+        console.log("   Position:", position);
 
-      } else {
-        console.warn("⚠️ Node has no ID, skipping backend update");
+        if (!parentNodeId) {
+          console.warn("⚠️ Could not find parent node ID, cannot create new node");
+          return;
+        }
+
+        const response = await createNode(parentNodeId, position as 'left' | 'right', node.value);
+
+        console.log("✅ Backend created successfully:", response);
+
+        // Update the node with the new ID from backend
+        if (response.node && response.node.nodeId) {
+          const nodeWithId = { ...node, nodeId: response.node.nodeId };
+          const updatedTree = updateNodeAtIndex(tree, nodeWithId);
+          setTree(updatedTree);
+          console.log("✅ Node now has ID:", response.node.nodeId);
+        } else {
+          const updatedTree = updateNodeAtIndex(tree, node);
+          setTree(updatedTree);
+        }
       }
+
+    } catch (err) {
+      console.error("❌ Error in handleUpdate:", err);
+      // Still update UI locally even if backend fails
+      const updatedTree = updateNodeAtIndex(tree, node);
+      setTree(updatedTree);
+    }
   }
 
   // Loading state
