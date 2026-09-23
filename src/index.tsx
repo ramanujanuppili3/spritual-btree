@@ -196,7 +196,11 @@ export function App1() {
           return;
         }
 
-        const response = await createNode(parentNodeId, position as 'left' | 'right', node.value);
+        const response = await createNode({
+  parentNodeId,
+  position: position as 'left' | 'right',
+  value: node.value
+});
 
         console.log("✅ Backend created successfully:", response);
 

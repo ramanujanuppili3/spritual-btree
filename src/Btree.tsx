@@ -32,65 +32,35 @@ export function Btree(props) : JSX.Element  {
         props.updateNodeValue(node, index);
     }
 
-    function addLeftNode() {
-        console.log("➕ Adding left child to node:", node.value);
-        console.log("   Current left child:", node.left);
-        
-        if (node.left) {
-            // Node already has a left child - move it under the new node
-            console.log("   Left child exists, moving it under new node");
-            const existingLeftChild = node.left;
-            
-            // Create new intermediate node
-            const newNode: BTNode = { 
-              value: 'new', 
-              left: existingLeftChild,  // Move existing child under new node
-              right: null, 
-              nodeId: '', 
-              index: 0 
-            };
-            
-            node.left = newNode;
-            console.log("✅ New node inserted, existing child moved under it");
-        } else {
-            // Node has no left child - just create new leaf node
-            console.log("   No left child exists, creating new leaf node");
-            node.left = { value: 'new', left: null, right: null, nodeId: '', index: 0 };
-            console.log("✅ New leaf node created");
-        }
-        
-        updateNodeValue(node, index);
-    }
+function addLeftNode() {
+  const newNode: BTNode = {
+    value: 'new',
+    left: node.left,
+    right: null,
+    nodeId: '',
+    index: 0
+  };
 
-    function addRightNode() {
-        console.log("➕ Adding right child to node:", node.value);
-        console.log("   Current right child:", node.right);
-        
-        if (node.right) {
-            // Node already has a right child - move it under the new node
-            console.log("   Right child exists, moving it under new node");
-            const existingRightChild = node.right;
-            
-            // Create new intermediate node
-            const newNode: BTNode = { 
-              value: 'new', 
-              left: null, 
-              right: existingRightChild,  // Move existing child under new node
-              nodeId: '', 
-              index: 0 
-            };
-            
-            node.right = newNode;
-            console.log("✅ New node inserted, existing child moved under it");
-        } else {
-            // Node has no right child - just create new leaf node
-            console.log("   No right child exists, creating new leaf node");
-            node.right = { value: 'new', left: null, right: null, nodeId: '', index: 0 };
-            console.log("✅ New leaf node created");
-        }
-        
-        updateNodeValue(node, index);
-    }
+  node.left = newNode;
+
+  // The empty nodeId causes handleUpdate() to call /create
+  updateNodeValue(newNode, index);
+}
+
+function addRightNode() {
+  const newNode: BTNode = {
+    value: 'new',
+    left: null,
+    right: node.right,
+    nodeId: '',
+    index: 0
+  };
+
+  node.right = newNode;
+
+  // The empty nodeId causes handleUpdate() to call /create
+  updateNodeValue(newNode, index);
+}
 
     function deleteLeftChild() {
         if (node.left) {
