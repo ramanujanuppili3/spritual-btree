@@ -27,15 +27,20 @@ export function Btree(props) : JSX.Element  {
  function btreeToJSX(node: BTNode, index: number): JSX.Element {
     console.log("rendering node ", node.value, " at index ", index);
     
-    function updateNodeValue(node: BTNode, index: number) {
-        console.log("🔧 updateNodeValue called with:", { value: node.value, nodeId: node.nodeId, index });
-        props.updateNodeValue(node, index);
-    }
+async function updateNodeValue(
+  node: BTNode,
+  index: number
+): Promise<void> {
+  console.log("🔧 updateNodeValue called with:", { value: node.value, nodeId: node.nodeId, index });
+  await props.updateNodeValue(node, index);
+}
 
-function addLeftNode() {
+ async function addLeftNode() {
+  const previousLeft = node.left;
+
   const newNode: BTNode = {
     value: 'new',
-    left: node.left,
+    left: previousLeft,
     right: null,
     nodeId: '',
     index: 0
@@ -43,24 +48,35 @@ function addLeftNode() {
 
   node.left = newNode;
 
-  // The empty nodeId causes handleUpdate() to call /create
-  updateNodeValue(newNode, index);
+  try {
+    await updateNodeValue(newNode, index);
+  } catch (error) {
+    node.left = previousLeft;
+    console.error('Failed to create left node:', error);
+  }
 }
 
-function addRightNode() {
+async function addRightNode() {
+  const previousRight = node.right;
+
   const newNode: BTNode = {
     value: 'new',
     left: null,
-    right: node.right,
+    right: previousRight,
     nodeId: '',
     index: 0
   };
 
   node.right = newNode;
 
-  // The empty nodeId causes handleUpdate() to call /create
-  updateNodeValue(newNode, index);
+  try {
+    await updateNodeValue(newNode, index);
+  } catch (error) {
+    node.right = previousRight;
+    console.error('Failed to create right node:', error);
+  }
 }
+
 
     function deleteLeftChild() {
         if (node.left) {

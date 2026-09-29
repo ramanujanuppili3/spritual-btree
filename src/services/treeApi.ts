@@ -1,7 +1,22 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3005';
 
+type CreateStandaloneNodeParams = {
+  value?: string;
+};
+
+type CreateStandaloneNodeResponse = {
+  success: boolean;
+  node: {
+    nodeId: string;
+    value: string;
+    [key: string]: any;
+  };
+};
+
 type CreateNodeParams = {
-  parentNodeId: string;
+  parentId: string;
+  childId: string;
+  middleId: string;
   position: 'left' | 'right';
   value?: string;
 };
@@ -12,12 +27,22 @@ type CreateNodeResponse = {
 };
 
 export async function createNode({
-  parentNodeId,
+  parentId,
+  childId,
+  middleId,
   position,
   value = 'new'
 }: CreateNodeParams): Promise<CreateNodeResponse> {
-  if (!parentNodeId || !parentNodeId.trim()) {
-    throw new Error('parentNodeId is required');
+  if (!parentId?.trim()) {
+    throw new Error('parentId is required');
+  }
+
+  if (!childId?.trim()) {
+    throw new Error('childId is required (the existing child node)');
+  }
+
+  if (!middleId?.trim()) {
+    throw new Error('middleId is required (the newly generated node ID)');
   }
 
   if (position !== 'left' && position !== 'right') {
@@ -25,12 +50,14 @@ export async function createNode({
   }
 
   const payload = {
-    parentNodeId,
+    parentId,
+    childId,
+    middleId,
     position,
     value: value.trim() || 'new'
   };
 
-  console.log('➕ Creating node');
+  console.log('➕ Creating/attaching node');
   console.log('📤 Request payload:', JSON.stringify(payload, null, 2));
 
   const response = await fetch(
@@ -205,4 +232,57 @@ export async function fetchNodeById(nodeId: string): Promise<any> {
     console.error("❌ Error fetching node:", err);
     throw err;
   }
+}
+
+
+/**
+ * Step 1: create a node and obtain its backend ID.
+ *
+ * Replace /api/btree/node with the actual backend endpoint
+ * that creates a standalone node.
+ */
+export async function createStandaloneNode({
+  value = 'new'
+}: CreateStandaloneNodeParams): Promise<CreateStandaloneNodeResponse> {
+  const payload = {
+    value: value.trim() || 'new'
+  };
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/btree/node`,
+    {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `Create standalone node failed: HTTP ${response.status} ${
+        responseText || response.statusText
+      }`
+    );
+  }
+
+  let data: CreateStandaloneNodeResponse;
+
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    throw new Error('Standalone node API returned invalid JSON');
+  }
+
+  if (!data.success || !data.node?.nodeId) {
+    throw new Error(
+      'Standalone node API did not return a nodeId'
+    );
+  }
+
+  return data;
 }

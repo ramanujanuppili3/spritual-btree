@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BTNode } from './types.ts';
-import { updateNodeById, updateNodeByIndex, batchUpdateNodes, createNode } from './services/treeApi.ts';
+import {
+  updateNodeById,
+  updateNodeByIndex,
+  batchUpdateNodes,
+  createNode
+} from './services/treeApi.ts';
 
 import {
   createSampleTree,
@@ -155,7 +160,10 @@ export function App1() {
   }
 
   // ✅ ENHANCED: Handle update with support for new nodes
-  async function handleUpdate(node: BTNode, index: number): void {
+async function handleUpdate(
+  node: BTNode,
+  index: number
+): Promise<void> {
     console.log("🔧 Updating node at index:", index);
     console.log("   Node value:", node.value);
     console.log("   Node ID:", node.nodeId);
@@ -180,41 +188,65 @@ export function App1() {
           setTree(updatedTree);
         }
       } 
-      // Case 2: Node has no ID - it's a new node, create it on backend
-      else {
-        console.log("➕ Case 2: Creating new node");
-        
-        // Find parent node to determine position
-        const parentNodeId = findParentNodeId(tree, node);
-        const position = findNodePosition(tree, node);
-        
-        console.log("   Parent Node ID:", parentNodeId);
-        console.log("   Position:", position);
+// Case 2: Node has no ID - it's a new node, create it on backend
+// Case 2: Node has no ID - it's a new node, create it on backend
+else {
+  console.log('➕ Case 2: Creating new node');
 
-        if (!parentNodeId) {
-          console.warn("⚠️ Could not find parent node ID, cannot create new node");
-          return;
-        }
+  const parentId = findParentNodeId(tree, node);
+  const position = findNodePosition(tree, node);
 
-        const response = await createNode({
-  parentNodeId,
-  position: position as 'left' | 'right',
-  value: node.value
-});
+  if (!parentId) {
+    throw new Error('Could not find parent node ID');
+  }
 
-        console.log("✅ Backend created successfully:", response);
+  if (!position) {
+    throw new Error('Could not determine node position');
+  }
 
-        // Update the node with the new ID from backend
-        if (response.node && response.node.nodeId) {
-          const nodeWithId = { ...node, nodeId: response.node.nodeId };
-          const updatedTree = updateNodeAtIndex(tree, nodeWithId);
-          setTree(updatedTree);
-          console.log("✅ Node now has ID:", response.node.nodeId);
-        } else {
-          const updatedTree = updateNodeAtIndex(tree, node);
-          setTree(updatedTree);
-        }
-      }
+  // The new node being created will replace the current node's position
+  // The current node (with existing ID) will become a child of the new middleId
+  // So we need to find an existing child of the current node to become the childId
+  let childId: string;
+  
+  // If the node has children, use one of them as the childId
+  if (node.left && node.left.nodeId) {
+    childId = node.left.nodeId;
+  } else if (node.right && node.right.nodeId) {
+    childId = node.right.nodeId;
+  } else {
+    throw new Error('Node must have at least one existing child with an ID');
+  }
+
+  // newly generated middle node that will be inserted between parent and child
+  const middleId = crypto.randomUUID();
+
+  console.log('   Parent ID:', parentId);
+  console.log('   Child ID (existing):', childId);
+  console.log('   Middle ID (new):', middleId);
+  console.log('   Position:', position);
+
+  const response = await createNode({
+    parentId,
+    childId,
+    middleId,
+    position,
+    value: node.value
+  });
+
+  const persistedNode = response.node ?? {
+    ...node,
+    nodeId: middleId
+  };
+
+  const nodeWithId = {
+    ...node,
+    ...persistedNode,
+    nodeId: persistedNode.nodeId || middleId
+  };
+
+  setTree(updateNodeAtIndex(tree, nodeWithId));
+}
 
     } catch (err) {
       console.error("❌ Error in handleUpdate:", err);
