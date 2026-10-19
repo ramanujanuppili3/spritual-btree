@@ -13,6 +13,8 @@ import {
   invertTreeInPlace,
 } from './btree.ts';
 
+import { fetchTree } from './services/treeApi.ts';
+
 import { Btree } from './Btree.tsx';
 
 import './style.css';
@@ -124,6 +126,7 @@ export function App1() {
       right: updateNodeAtIndex(node.right, updatedNode),
     };
   }
+
 
   // ✅ Helper: Find parent node ID for a given node
   function findParentNodeId(currentNode: BTNode | null, targetNode: BTNode): string | null {
@@ -256,6 +259,23 @@ else {
     }
   }
 
+  
+  // Refresh entire tree from backend and update UI state
+async function refreshTree(): Promise<void> {
+  try {
+    console.log('🔁 refreshTree: fetching canonical tree from backend');
+    const res = await fetchTree();
+    if (res?.tree) {
+      setTree(res.tree);
+      console.log('🔁 refreshTree: tree updated from backend');
+    } else {
+      console.warn('🔁 refreshTree: backend returned no tree');
+    }
+  } catch (err) {
+    console.error('🔁 refreshTree failed:', err);
+  }
+}
+
   // Loading state
   if (loading) {
     return (
@@ -274,7 +294,8 @@ else {
       {console.log("Rendering tree:", JSON.stringify(tree))}
 
       {tree ? (
-        <Btree head={tree} label="Sample binary tree" updateNodeValue={handleUpdate} />
+        <Btree head={tree} label="Sample binary tree"  updateNodeValue={handleUpdate}
+    refreshTree={refreshTree} />
       ) : (
         <p>No tree loaded. Click regenerate to load.</p>
       )}

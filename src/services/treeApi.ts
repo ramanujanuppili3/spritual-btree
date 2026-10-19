@@ -235,6 +235,89 @@ export async function fetchNodeById(nodeId: string): Promise<any> {
 }
 
 
+
+
+// new function at the end of the file (append)
+export async function saveTree(root: any): Promise<{ success: boolean; tree?: any }> {
+  try {
+    console.log('🔧 API: Saving full tree to backend');
+    const response = await fetch(`${API_BASE_URL}/api/btree/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tree: root })
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ saveTree response:', data);
+    return data;
+  } catch (err) {
+    console.error('❌ Error saving tree:', err);
+    throw err;
+  }
+}
+
+// new: delete the immediate left/right child via the backend Neo4j API
+export async function deleteChildRelationship(
+  parentId: string,
+  side: 'left' | 'right'
+): Promise<{ success: boolean; parentId?: string; childId?: string }> {
+  if (!parentId?.trim()) {
+    throw new Error('parentId is required');
+  }
+  if (side !== 'left' && side !== 'right') {
+    throw new Error('side must be "left" or "right"');
+  }
+
+  try {
+    console.log(`🔧 API: Deleting ${side} child of parent ${parentId}`);
+    const response = await fetch(`${API_BASE_URL}/api/btree/${encodeURIComponent(parentId)}/delete-child`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ side })
+    });
+
+    const text = await response.text().catch(() => '');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
+    }
+
+    const data = text ? JSON.parse(text) : { success: true };
+    console.log('✅ deleteChildRelationship response:', data);
+    return data;
+  } catch (err) {
+    console.error('❌ Error calling deleteChildRelationship:', err);
+    throw err;
+  }
+}
+
+// new: fetch the canonical full tree from backend
+export async function fetchTree(): Promise<{ success: boolean; tree?: any }> {
+  try {
+    console.log('🔧 API: Fetching full tree from backend');
+    const response = await fetch(`${API_BASE_URL}/api/btree/nested`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ fetchTree response:', data);
+    return data;
+  } catch (err) {
+    console.error('❌ Error fetching tree:', err);
+    throw err;
+  }
+}
+
 /**
  * Step 1: create a node and obtain its backend ID.
  *

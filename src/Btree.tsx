@@ -3,15 +3,15 @@ import {EditBtree} from './EditBtree.tsx';
 import { BTNode } from './types';
 import { useState } from 'react';
 import {Tree, TreeNode} from 'react-organizational-chart';
+import { deleteChildRelationship } from './services/treeApi.ts';
 
 /** Turns a btree into a nice visual OrgChart. Top level gets a different node.
  * The rest is delegated to btreeToJSX.
  */
 export function Btree(props) : JSX.Element  {
-
+ const { head, label, refreshTree } = props;
  const [text, setText] = useState("");
  const [edit, setEdit] = useState(false);
-  const { head, label } = props;
 
 
   return (
@@ -77,22 +77,107 @@ async function addRightNode() {
   }
 }
 
+async function deleteLeftChild() {
+  const child = node.left;
+  const parentId = node.nodeId;
 
-    function deleteLeftChild() {
-        if (node.left) {
-            console.log("✕ Deleting left child of node:", node.value);
-            node.left = null;
-            updateNodeValue(node, index);
-        }
-    }
+  console.log('✕ deleteLeftChild called for node:', node.value, 'nodeId:', parentId);
 
-    function deleteRightChild() {
-        if (node.right) {
-            console.log("✕ Deleting right child of node:", node.value);
-            node.right = null;
-            updateNodeValue(node, index);
-        }
+  // If we have a backend id for the parent and a refreshTree function, call backend
+  if (parentId && typeof refreshTree === 'function') {
+    try {
+      console.log('✕ attempting backend delete-left for parentId:', parentId);
+      await deleteChildRelationship(parentId, 'left'); // ensure this function exists (services/treeApi.ts)
+      console.log('✕ backend delete-left succeeded, refreshing tree from server');
+      await refreshTree();
+      return;
+    } catch (err) {
+      console.error('✕ backend delete-left failed, will fall back to local promotion:', err);
+      // continue to fallback behavior
     }
+  } else {
+    console.log('✕ refreshTree not available or parentId missing — using local fallback');
+  }
+
+  // Local fallback (mutate in-memory node then call updateNodeValue)
+  if (!child) {
+    console.warn('✕ deleteLeftChild: no left child to delete');
+    return;
+  }
+
+  console.log('✕ Performing local promotion for left child:', child.value);
+
+  if (!child.left && !child.right) {
+    node.left = null;
+    console.log('✕ local: child had no grandchildren — removed immediate left child');
+  } else if (child.left && !child.right) {
+    node.left = child.left;
+    console.log('✕ local: promoted child.left into node.left');
+  } else if (!child.left && child.right) {
+    node.left = child.right;
+    console.log('✕ local: promoted child.right into node.left');
+  } else {
+    node.left = child.left;
+    let current: BTNode = node.left as BTNode;
+    while (current.right) {
+      current = current.right as BTNode;
+    }
+    current.right = child.right;
+    console.log('✕ local: promoted left subtree and attached right subtree to far-right');
+  }
+
+  updateNodeValue(node, index);
+}
+
+async function deleteRightChild() {
+  const child = node.right;
+  const parentId = node.nodeId;
+
+  console.log('✕ deleteRightChild called for node:', node.value, 'nodeId:', parentId);
+
+  if (parentId && typeof refreshTree === 'function') {
+    try {
+      console.log('✕ attempting backend delete-right for parentId:', parentId);
+      await deleteChildRelationship(parentId, 'right');
+      console.log('✕ backend delete-right succeeded, refreshing tree from server');
+      await refreshTree();
+      return;
+    } catch (err) {
+      console.error('✕ backend delete-right failed, falling back to local promotion:', err);
+      // fallback
+    }
+  } else {
+    console.log('✕ refreshTree not available or parentId missing — using local fallback');
+  }
+
+  if (!child) {
+    console.warn('✕ deleteRightChild: no right child to delete');
+    return;
+  }
+
+  console.log('✕ Performing local promotion for right child:', child.value);
+
+  if (!child.left && !child.right) {
+    node.right = null;
+    console.log('✕ local: child had no grandchildren — removed immediate right child');
+  } else if (!child.left && child.right) {
+    node.right = child.right;
+    console.log('✕ local: promoted child.right into node.right');
+  } else if (child.left && !child.right) {
+    node.right = child.left;
+    console.log('✕ local: promoted child.left into node.right');
+  } else {
+    node.right = child.right;
+    let current: BTNode = node.right as BTNode;
+    while (current.left) {
+      current = current.left as BTNode;
+    }
+    current.left = child.left;
+    console.log('✕ local: promoted right subtree and attached left subtree to far-left');
+  }
+
+  updateNodeValue(node, index);
+}
 
   return (
     <TreeNode
